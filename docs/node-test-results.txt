@@ -1,0 +1,34 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> family-guard@1.0.0 test
+> node --test
+
+✔ recognizable HTTPS host has no obvious indicators (5.36584ms)
+✔ lookalike banking link triggers high-risk warning (1.124012ms)
+✔ queries containing private data are not saved (0.142063ms)
+✔ demo simulation clearly marked and flagged (0.135805ms)
+✔ rejects inappropriate URL schemes (0.309005ms)
+✔ blank SMS configuration sends no external request (0.930981ms)
+✔ short service codes cannot be family SMS recipients (0.12634ms)
+▶ isolated API workflow, permissions and restored server timer
+  ✔ state requires authentication (8.984621ms)
+  ✔ incorrect PIN is rejected (15.526656ms)
+  ✔ guardian cannot create senior scans (3.58242ms)
+  ✔ invalid URL schemes return a validation error (3.056098ms)
+  ✔ ordinary URL produces no incident (9.860499ms)
+  ✔ lookalike URL creates a real prototype alert with default 180-second deadline (6.834434ms)
+  ✔ senior cannot resolve the guardian decision (5.044566ms)
+  ✔ second scan cannot overwrite the active incident (3.068938ms)
+  ✔ guardian block clears the active alert and retains history (6.934375ms)
+  ✔ server restart preserves the unresolved deadline (2.054763ms)
+  ✔ timer escalates without guardian activity or browser connection (15018.812993ms)
+  ✔ guardian can resolve an escalated incident (4.287171ms)
+✔ isolated API workflow, permissions and restored server timer (15841.779577ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15956.958312

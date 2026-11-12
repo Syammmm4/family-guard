@@ -1,0 +1,29 @@
+# Render Blueprint for Family Guard (demo).
+# Render reads this file when you choose "New > Blueprint" and select this GitHub repo.
+services:
+  - type: web
+    name: family-guard
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: HOST
+        value: 0.0.0.0
+      - key: SENIOR_NAME
+        value: Puan Rosnah
+      - key: GUARDIAN_NAME
+        value: Faiz (Anak)
+      # 180 = the real 3-minute design. Use 20 for a fast demo of scenario 2.
+      - key: INCIDENT_TIMEOUT_SECONDS
+        value: "180"
+      # Secrets: Render asks you to type these when you create the Blueprint.
+      # Use different PINs of at least 6 digits. The server refuses the demo PINs on Render.
+      - key: SENIOR_PIN
+        sync: false
+      - key: GUARDIAN_PIN
+        sync: false

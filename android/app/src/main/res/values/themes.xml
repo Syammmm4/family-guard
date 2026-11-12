@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FamilyGuard" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/fg_green</item>
+        <item name="android:colorAccent">@color/fg_green</item>
+        <item name="android:windowBackground">@color/fg_paper</item>
+        <item name="android:statusBarColor">@color/fg_navy</item>
+    </style>
+
+    <!-- Dark "tunggu sekejap" screen shown when a tapped link is being checked. -->
+    <style name="Theme.FamilyGuard.Pause">
+        <item name="android:windowBackground">@color/fg_navy</item>
+        <item name="android:statusBarColor">@color/fg_navy</item>
+        <item name="android:navigationBarColor">@color/fg_navy</item>
+    </style>
+</resources>

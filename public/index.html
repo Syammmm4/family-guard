@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1e2b" />
+  <meta name="description" content="Family Guard: prototaip kesedaran scam untuk warga emas, dipantau oleh keluarga." />
+  <title>Family Guard — Selamat bersama</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="app">
+    <header class="topbar">
+      <a href="/" class="brand" aria-label="Laman utama Family Guard">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M16 2.8 27 7v8.7c0 7.1-4.3 11.3-11 14.5C9.3 27 5 22.8 5 15.7V7L16 2.8Z" fill="currentColor"/><path d="m11.1 16.1 3.4 3.4 6.6-7" stroke="#073F39" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>family<span class="brand-accent">guard</span><span class="brand-dot">.</span></span>
+      </a>
+      <div class="topbar-right"><span class="prototype-pill"><span class="status-circle"></span> Mod prototaip</span><div id="topbar-actions"></div></div>
+    </header>
+    <main id="main" class="main" aria-live="polite"></main>
+    <footer class="footer"><span>© 2026 Family Guard · Melindungi insan yang anda sayangi.</span><span>Prototaip laman web pendidikan · Malaysia</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
