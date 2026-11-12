@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/*.json
+.DS_Store
+npm-debug.log*
+# Android build output and machine-specific settings
+android/.gradle/
+android/.idea/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
