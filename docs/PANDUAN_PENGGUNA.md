@@ -8,6 +8,12 @@ Family Guard ialah prototaip yang membantu ibu/bapa warga emas mengelak pautan s
 
 ## 1. Cara menjalankan sistem
 
+### Dalam talian (Render, tiada pemasangan)
+
+Buka alamat Render anda (cth. `https://family-guard-xxxx.onrender.com`) dalam **dua tab**. Gunakan PIN yang ditetapkan di Render (`SENIOR_PIN` untuk ibu/bapa, `GUARDIAN_PIN` untuk anak). Kali pertama mungkin mengambil masa sehingga 1 minit jika pelayan sedang tidur. Lihat [DEPLOY_RENDER.md](DEPLOY_RENDER.md).
+
+### Pada komputer sendiri
+
 Keperluan: **Node.js 20 atau lebih baharu**.
 
 **Cara paling mudah (Windows):** klik dua kali fail `start-windows.bat`.

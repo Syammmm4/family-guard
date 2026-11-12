@@ -9,7 +9,7 @@ Aplikasi Android ini menangkap pautan yang ditekan oleh ibu/bapa dalam **WhatsAp
 | Telefon ibu/bapa | **Ibu / bapa** | Family Guard menjadi "pelayar lalai". Setiap pautan yang ditekan disemak dahulu. Pautan selamat terus dibuka dalam Chrome. |
 | Telefon anak | **Anak** | Menerima notifikasi amaran dan memilih **Selamat** atau **Scam, sekat**. |
 
-Anak juga boleh menggunakan **papan pemuka web** (http://ALAMAT-KOMPUTER:3000) dan bukan aplikasi. Kedua-duanya berkongsi pelayan yang sama.
+Anak juga boleh menggunakan **papan pemuka web** (alamat Render anda, cth. `https://family-guard-xxxx.onrender.com`) dan bukan aplikasi. Kedua-duanya berkongsi pelayan yang sama.
 
 ---
 
@@ -29,26 +29,31 @@ Anak juga boleh menggunakan **papan pemuka web** (http://ALAMAT-KOMPUTER:3000) d
 
 ---
 
-## 1. Sediakan pelayan (komputer riba)
+## 1. Pelayan
 
-Telefon perlu boleh sampai ke komputer melalui Wi-Fi.
+### Pilihan A: Render (disyorkan, sudah dideploy)
 
-1. Buka fail `.env` dan tukar baris ini:
-   ```ini
-   HOST=0.0.0.0
-   GUARDIAN_NAME=Faiz (Anak)
-   ```
-   Pilihan: `GUARDIAN_PHONE=+60123456789` untuk butang "Hubungi anak".
-2. Mulakan pelayan:
-   ```powershell
-   npm.cmd start
-   ```
-3. Jika Windows bertanya tentang **Firewall untuk Node.js**, pilih **Private networks** sahaja dan tekan **Allow**.
-4. Cari alamat komputer dengan `ipconfig`, contohnya `IPv4 Address: 192.168.1.10`.
-   Alamat pelayan ialah **`http://192.168.1.10:3000`**.
-5. Uji dari pelayar telefon: buka `http://192.168.1.10:3000`. Jika halaman Family Guard keluar, sambungan berjaya.
+Pelayan berada dalam talian, jadi **tiada npm, tiada komputer riba, dan telefon boleh guna mana-mana internet** (Wi-Fi atau data mudah alih).
 
-> Jangan buka port ini kepada internet. Gunakan Wi-Fi rumah atau Wi-Fi peribadi sahaja.
+| Perkara | Nilai |
+|---|---|
+| **Alamat pelayan** | Alamat Render anda, cth. `https://family-guard-xxxx.onrender.com` (lihat di Render → family-guard, bahagian atas) |
+| **PIN ibu/bapa** | Nilai `SENIOR_PIN` yang anda tetapkan di Render |
+| **PIN anak** | Nilai `GUARDIAN_PIN` yang anda tetapkan di Render |
+
+- **Uji dahulu:** buka `https://…onrender.com/api/health` dalam Chrome telefon. Jawapan yang betul ialah `{"status":"ok"}`.
+- **Pelayan percuma tidur** selepas kira-kira 15 minit tanpa pengguna. Buka alamat itu **1 minit sebelum** demo supaya ia bangun. Selagi aplikasi anak berjalan, pelayan kekal jaga.
+- **Tukar tetapan** (nama, masa menunggu, nombor anak): Render → family-guard → **Environment**. Lihat [DEPLOY_RENDER.md](DEPLOY_RENDER.md).
+
+### Pilihan B: Komputer riba (tanpa internet, Wi-Fi yang sama)
+
+1. Dalam `.env`, tetapkan `HOST=0.0.0.0`, kemudian jalankan `npm.cmd start`.
+2. Jika Windows bertanya tentang **Firewall untuk Node.js**, pilih **Private networks** sahaja dan tekan **Allow**.
+3. Cari alamat komputer dengan `ipconfig` (cth. `192.168.1.10`). Alamat pelayan ialah `http://192.168.1.10:3000`.
+   - Untuk **emulator Android Studio**: `http://10.0.2.2:3000`
+4. PIN ialah nilai dalam fail `.env` (demo: 1357 / 2468).
+
+> Jangan buka port komputer riba kepada internet. Untuk akses dari luar, gunakan Render.
 
 ---
 
@@ -76,8 +81,9 @@ Salin ke telefon dan buka. Benarkan "Pasang aplikasi tidak diketahui" jika ditan
 ## 3. Sediakan telefon ibu/bapa
 
 1. Buka **Family Guard**.
-2. Alamat pelayan: `http://192.168.1.10:3000` (alamat komputer anda).
-3. Pilih **Ibu / bapa (dilindungi)** dan masukkan PIN **1357**, kemudian tekan **Log masuk**.
+2. Alamat pelayan: alamat Render anda, cth. `https://family-guard-xxxx.onrender.com`.
+3. Pilih **Ibu / bapa (dilindungi)** dan masukkan **PIN ibu/bapa** (`SENIOR_PIN` di Render), kemudian tekan **Log masuk**.
+   - Log masuk pertama mungkin mengambil masa sehingga 1 minit jika pelayan sedang tidur.
 4. Tekan **Aktifkan perlindungan** dan pilih **Family Guard** sebagai aplikasi pelayar.
    - Jika tiada dialog: **Tetapan, Aplikasi, Aplikasi lalai, Apl pelayar**, kemudian pilih **Family Guard**.
 5. Kad hijau **"Perlindungan pautan AKTIF"** akan muncul.
@@ -88,7 +94,7 @@ Salin ke telefon dan buka. Benarkan "Pasang aplikasi tidak diketahui" jika ditan
 
 1. Buka **Family Guard**.
 2. Masukkan alamat pelayan yang sama.
-3. Pilih **Anak** dan masukkan PIN **2468**, kemudian tekan **Log masuk**.
+3. Pilih **Anak** dan masukkan **PIN anak** (`GUARDIAN_PIN` di Render), kemudian tekan **Log masuk**.
 4. Tekan **Benarkan** apabila diminta kebenaran notifikasi.
 5. Notifikasi kecil **"Family Guard sedang memantau"** akan sentiasa ada. Ini bermakna amaran akan sampai walaupun aplikasi ditutup.
 
@@ -96,7 +102,7 @@ Salin ke telefon dan buka. Benarkan "Pasang aplikasi tidak diketahui" jika ditan
 
 ## 5. Skrip demo
 
-> Untuk demo cepat, tetapkan `INCIDENT_TIMEOUT_SECONDS=20` dalam `.env` dan mulakan semula pelayan.
+> Untuk demo cepat, tetapkan `INCIDENT_TIMEOUT_SECONDS` = `20`: di **Render → Environment** (pelayan dimulakan semula sendiri), atau dalam `.env` jika guna komputer riba.
 
 **Sediakan pautan ujian:** dari telefon lain (atau WhatsApp Web), hantar mesej WhatsApp kepada telefon ibu/bapa:
 
@@ -146,10 +152,11 @@ Di papan pemuka web anak, tekan **Pulihkan mesej demo**. Ini juga melupakan kepu
 ## 6. Had prototaip (beritahu penonton dengan jujur)
 
 - **Mesej WhatsApp tidak dipadam.** WhatsApp tidak membenarkan aplikasi lain memadam mesej. Sebaliknya, pautan scam **disekat dan diingati**, jadi menekannya lagi tidak membahayakan.
-- **997 tidak disambungkan secara automatik.** Butang hanya membuka dail. Ibu/bapa yang melaporkan jawapan 997.
+- **997 tidak disambungkan secara automatik.** Butang hanya membuka dail, untuk kes maklumat bank, OTP atau wang sudah diberikan.
 - **Hanya pautan yang dibuka melalui pelayar** ditangkap. Sesetengah aplikasi (cth. Telegram dengan "pelayar dalam aplikasi", atau Facebook) membuka pautan di dalam aplikasi mereka sendiri. Laman yang "disahkan" oleh aplikasi rasmi (cth. pautan Shopee yang dibuka terus dalam aplikasi Shopee) tidak melalui Family Guard.
 - **Android sahaja.** iPhone tidak membenarkan ini dengan cara yang sama.
-- **Pelayan di komputer riba melalui HTTP biasa.** Ini sesuai untuk demo di Wi-Fi yang sama sahaja. Versi sebenar perlu pelayan dalam talian dengan HTTPS dan akaun sebenar.
+- **Satu keluarga sahaja, dengan PIN bersama.** Semua penguji berkongsi seorang ibu/bapa dan seorang anak, jadi uji seorang demi seorang. Versi sebenar perlu akaun dan pasangan peranti untuk setiap keluarga.
+- **Pelayan percuma Render** tidur apabila tidak digunakan, dan sejarah amaran hilang apabila ia dimulakan semula.
 - **Pengesanan menggunakan peraturan mudah** (heuristik), bukan pangkalan data scam rasmi.
 
 ---
@@ -158,7 +165,8 @@ Di papan pemuka web anak, tekan **Pulihkan mesej demo**. Ini juga melupakan kepu
 
 | Masalah | Penyelesaian |
 |---|---|
-| "Tidak dapat berhubung dengan pelayan" | Pastikan `HOST=0.0.0.0`, pelayan sedang berjalan, telefon dalam Wi-Fi yang sama, dan Firewall membenarkan Node.js. Uji `http://ALAMAT:3000` dalam Chrome telefon. |
+| "Tidak dapat berhubung dengan pelayan" | **Render:** buka `https://…onrender.com/api/health` dalam Chrome telefon dan tunggu sehingga 1 minit (pelayan bangun), kemudian tekan **Cuba lagi**. Pastikan alamat bermula dengan `https://`. **Komputer riba:** pastikan `HOST=0.0.0.0`, pelayan berjalan, Wi-Fi sama, dan Firewall membenarkan Node.js. |
+| "PIN akses salah" | Gunakan PIN yang ditetapkan di Render → **Environment** (bukan 1357/2468). |
 | Pautan terus dibuka dalam Chrome tanpa disemak | Family Guard bukan pelayar lalai. Buka aplikasi dan tekan **Aktifkan perlindungan**. |
 | "Tiada pelayar lain dijumpai" | Pasang atau aktifkan semula Chrome. |
 | Anak tidak menerima notifikasi | Benarkan notifikasi untuk Family Guard. Pada Xiaomi, Oppo, Vivo dan Samsung, matikan **pengoptimuman bateri** untuk Family Guard supaya pemantauan tidak dihentikan. |

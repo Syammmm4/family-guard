@@ -14,10 +14,19 @@ fun JSONObject.str(key: String): String? = if (isNull(key)) null else optString(
 /** Talks to the same Family Guard Node server used by the website. Call only from a background thread. */
 object Api {
 
+    /**
+     * Adds a scheme if the user typed none. Online servers (e.g. Render) need https://.
+     * Local addresses (an IP address, localhost or an address with a :port) use http://.
+     */
     fun normalizeServer(input: String): String {
         var s = input.trim().trimEnd('/')
         if (s.isEmpty()) return s
-        if (!s.startsWith("http://", ignoreCase = true) && !s.startsWith("https://", ignoreCase = true)) s = "http://$s"
+        if (!s.startsWith("http://", ignoreCase = true) && !s.startsWith("https://", ignoreCase = true)) {
+            val host = s.substringBefore('/')
+            val local = host.contains(':') || host.startsWith("localhost", ignoreCase = true) ||
+                Regex("""^\d{1,3}(\.\d{1,3}){3}$""").matches(host)
+            s = (if (local) "http://" else "https://") + s
+        }
         return s
     }
 
@@ -29,8 +38,9 @@ object Api {
         }
         try {
             conn.requestMethod = method
-            conn.connectTimeout = 6000
-            conn.readTimeout = 8000
+            // A free Render server can take 30–60 s to wake up from sleep.
+            conn.connectTimeout = 15000
+            conn.readTimeout = 60000
             conn.setRequestProperty("Accept", "application/json")
             if (token != null) conn.setRequestProperty("Authorization", "Bearer $token")
             if (body != null) {
@@ -48,7 +58,7 @@ object Api {
             }
             return status to json
         } catch (e: IOException) {
-            throw ApiException(0, "Tidak dapat berhubung dengan pelayan Family Guard. Pastikan telefon dan komputer berada dalam Wi-Fi yang sama.")
+            throw ApiException(0, "Tidak dapat berhubung dengan pelayan Family Guard. Semak sambungan internet dan alamat pelayan, kemudian cuba lagi.")
         } finally {
             conn.disconnect()
         }

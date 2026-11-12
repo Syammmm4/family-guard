@@ -31,9 +31,10 @@ Mereka mesti **bukan ahli kumpulan anda**. Lebih ramai lebih baik, tetapi minimu
 
 ## 3. Persediaan (sebelum peserta tiba)
 
-- [ ] Pelayan berjalan (`npm.cmd start`), dengan `INCIDENT_TIMEOUT_SECONDS=20` dalam `.env` supaya senario 2 cepat.
-- [ ] Telefon / emulator **ibu/bapa** sudah log masuk (PIN 1357), dengan **Perlindungan pautan AKTIF**.
-- [ ] Peranan **anak** dimainkan oleh anda, pada telefon kedua atau papan pemuka web (PIN 2468).
+- [ ] Pelayan Render sudah bangun: buka `https://…onrender.com/api/health` dan pastikan `{"status":"ok"}`. Tetapkan `INCIDENT_TIMEOUT_SECONDS` = `20` di **Render → Environment** supaya senario 2 cepat.
+- [ ] Telefon / emulator **ibu/bapa** sudah log masuk (alamat Render + PIN ibu/bapa), dengan **Perlindungan pautan AKTIF**.
+- [ ] Peranan **anak** dimainkan oleh anda, pada telefon kedua atau papan pemuka web (PIN anak).
+- [ ] Hanya **seorang peserta pada satu masa**, kerana semua berkongsi satu keluarga.
 - [ ] Tekan **Pulihkan mesej demo** supaya tiada keputusan lama diingati.
 - [ ] Hantar 3 mesej ini ke telefon ibu/bapa (WhatsApp atau SMS):
   1. `Aisyah: Mak, ni resepi rendang: https://www.google.com`

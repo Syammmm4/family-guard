@@ -85,11 +85,11 @@ class MainActivity : Activity() {
         val (root, col) = ui.page(Palette.paper)
         ui.text(col, "familyguard.", 26f, Palette.green, bold = true)
         ui.text(col, "Sediakan telefon ini", 28f, Palette.ink, bold = true, top = 18)
-        ui.text(col, "Lakukan sekali sahaja. Pastikan telefon dan komputer pelayan Family Guard menggunakan Wi-Fi yang sama.", 16f, Palette.sub, top = 8)
+        ui.text(col, "Lakukan sekali sahaja. Anak biasanya yang menyediakan telefon ini.", 16f, Palette.sub, top = 8)
 
         ui.text(col, "Alamat pelayan", 16f, Palette.ink, bold = true, top = 24)
-        val server = ui.field(col, prefs.server, "cth. http://192.168.1.10:3000", Ui.TYPE_URL)
-        ui.text(col, "Lihat alamat IPv4 komputer dengan arahan ipconfig.", 14f, Palette.sub, top = 6)
+        val server = ui.field(col, prefs.server, "cth. https://family-guard-xxxx.onrender.com", Ui.TYPE_URL)
+        ui.text(col, "Gunakan alamat Render. Ujian di komputer: http://10.0.2.2:3000 (emulator) atau http://ALAMAT-IP:3000 (Wi-Fi sama).", 14f, Palette.sub, top = 6)
 
         ui.text(col, "Telefon ini milik siapa?", 16f, Palette.ink, bold = true, top = 24)
         val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
@@ -133,7 +133,7 @@ class MainActivity : Activity() {
                 result.onFailure { e -> error.text = e.message }
             }
         }
-        ui.text(col, "Demo: PIN ibu/bapa 1357, PIN anak 2468 (tukar dalam fail .env pelayan).", 13f, Palette.sub, top = 14)
+        ui.text(col, "Minta PIN daripada orang yang menyediakan pelayan. Log masuk pertama mungkin mengambil masa sehingga 1 minit jika pelayan sedang tidur.", 14f, Palette.sub, top = 14)
         setContentView(root)
     }
 

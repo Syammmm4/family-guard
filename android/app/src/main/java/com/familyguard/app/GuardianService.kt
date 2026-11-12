@@ -11,8 +11,8 @@ import org.json.JSONObject
 
 /**
  * Anak mode. Checks the Family Guard server every few seconds while running in the background
- * and posts an alert when ibu/bapa taps a risky link. No Firebase needed: this is designed for a
- * demo on the same Wi-Fi as the laptop server.
+ * and posts an alert when ibu/bapa taps a risky link. No Firebase needed: works with the Render
+ * server or a laptop server on the same Wi-Fi. (Polling also keeps a free Render server awake.)
  */
 class GuardianService : Service() {
 
