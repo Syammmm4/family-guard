@@ -21,7 +21,7 @@ class ParentWatchService : Service() {
     private var incidentId: String? = null
     private var url = ""
     private var domain = ""
-    private var guardianName = "Anak anda"
+    private var guardianName = "Anak"
     private var escalatedShown = false
     private var startedAt = 0L
 

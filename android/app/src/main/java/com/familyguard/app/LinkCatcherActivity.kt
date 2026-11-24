@@ -17,7 +17,7 @@ import java.time.Instant
  * Ibu/bapa mode. Family Guard is the default browser, so a link tapped in WhatsApp opens here first:
  *  - safe link            -> handed straight to Chrome (the parent barely notices)
  *  - risky link           -> "Biar anak anda sahkan pautan ini dulu" while anak decides
- *  - no answer in time    -> "Hubungi 997" button
+ *  - no answer in time    -> "Jangan buka pautan ini", with 997 for when money or details were given
  *  - already blocked site -> blocked immediately
  * The parent can always go back to WhatsApp; only this one link waits. The phone is never locked.
  */
@@ -30,13 +30,13 @@ class LinkCatcherActivity : Activity() {
     private var screen = Screen.CHECKING
     private var url = ""
     private var domain = ""
-    private var source = "Aplikasi lain"
+    private var source = ""
     private var incidentId: String? = null
     private var expiresAt = 0L
     private var decided = false
     private var isResumedNow = false
     private var openWhenResumed = false
-    private var guardianName = "anak anda"
+    private var guardianName = ""
     private var guardianPhone: String? = null
     private var timeoutSeconds = 180
     private var countdownView: TextView? = null
@@ -55,6 +55,7 @@ class LinkCatcherActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = Ui(this)
+        guardianName = tr("anak anda", "your anak")
         val data = intent?.data
         val scheme = data?.scheme?.lowercase()
         if (data == null || (scheme != "http" && scheme != "https")) {
@@ -67,7 +68,7 @@ class LinkCatcherActivity : Activity() {
 
         // Not a protected parent phone (not set up, or this is anak's phone): behave like a normal hand-off.
         if (!Prefs(this).isParent) {
-            if (!Browsers.open(this, url)) Toast.makeText(this, "Tiada pelayar lain dijumpai. Sila pasang Chrome.", Toast.LENGTH_LONG).show()
+            if (!Browsers.open(this, url)) toast(noBrowser())
             finish()
             return
         }
@@ -93,17 +94,19 @@ class LinkCatcherActivity : Activity() {
         super.onDestroy()
     }
 
+    private fun toast(text: String?) = Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+    private fun noBrowser() = tr("Tiada pelayar lain dijumpai. Sila pasang Chrome.", "No other browser found. Please install Chrome.")
+
     /** Which app the link was tapped in, e.g. "WhatsApp". Shown to anak. */
     private fun sourceLabel(): String = when (referrer?.host) {
-        null -> "Aplikasi lain"
         "com.whatsapp" -> "WhatsApp"
         "com.whatsapp.w4b" -> "WhatsApp Business"
         "org.telegram.messenger" -> "Telegram"
-        "com.google.android.apps.messaging", "com.samsung.android.messaging" -> "Mesej SMS"
+        "com.google.android.apps.messaging", "com.samsung.android.messaging" -> tr("Mesej SMS", "SMS messages")
         "com.facebook.orca" -> "Messenger"
         "com.facebook.katana" -> "Facebook"
-        packageName -> "Ujian Family Guard"
-        else -> "Aplikasi lain"
+        packageName -> tr("Ujian Family Guard", "Family Guard test")
+        else -> tr("Aplikasi lain", "Another app")
     }
 
     // ---------------------------------------------------------------- server
@@ -146,7 +149,7 @@ class LinkCatcherActivity : Activity() {
         incidentId = id
         if (isResumedNow) visibleIncidentId = id
         expiresAt = parseTime(incident.optString("expiresAt"))
-        tips = incident.optJSONArray("tips")?.let { arr -> List(arr.length()) { arr.optString(it) }.filter { it.isNotBlank() } } ?: emptyList()
+        tips = incident.textList(this, "tips")
         val escalated = incident.optString("status") == "ESCALATED"
         if (escalated) showEscalated(incident) else showWaiting(incident)
         // Keeps watching even if the parent leaves this screen, and notifies them of the decision.
@@ -199,7 +202,7 @@ class LinkCatcherActivity : Activity() {
         Bg.task({ Api.call(this, "POST", "/api/incidents/${Uri.encode(id)}/report-997", JSONObject().put("decision", "BLOCKED")) }) { result ->
             if (isDestroyed) return@task
             result.onSuccess { handler.removeCallbacks(pollTask); handler.post(pollTask) }
-            result.onFailure { e -> Toast.makeText(this, e.message, Toast.LENGTH_LONG).show() }
+            result.onFailure { e -> toast(e.message) }
         }
     }
 
@@ -215,7 +218,7 @@ class LinkCatcherActivity : Activity() {
         if (Browsers.open(this, url)) {
             finish()
         } else {
-            Toast.makeText(this, "Tiada pelayar lain dijumpai. Sila pasang Chrome.", Toast.LENGTH_LONG).show()
+            toast(noBrowser())
         }
     }
 
@@ -223,7 +226,7 @@ class LinkCatcherActivity : Activity() {
         try {
             startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
         } catch (e: Exception) {
-            Toast.makeText(this, "Tidak dapat membuka aplikasi telefon.", Toast.LENGTH_LONG).show()
+            toast(tr("Tidak dapat membuka aplikasi telefon.", "Cannot open the phone app."))
         }
     }
 
@@ -231,7 +234,7 @@ class LinkCatcherActivity : Activity() {
         AlertDialog.Builder(this)
             .setMessage(message)
             .setPositiveButton(yes) { _, _ -> action() }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton(tr("Batal", "Cancel"), null)
             .show()
     }
 
@@ -254,102 +257,129 @@ class LinkCatcherActivity : Activity() {
         val card = ui.card(col, Palette.navyCard, top = 22)
         ui.text(card, "⚠️  $label", 16f, Palette.peach, bold = true)
         ui.text(card, value, 16f, Palette.white, top = 6)
-        ui.text(card, "Dari: $source", 14f, Palette.onDark, top = 6)
+        ui.text(card, tr("Dari: $source", "From: $source"), 14f, Palette.onDark, top = 6)
     }
 
     private fun showChecking() {
-        val col = begin(Screen.CHECKING, "MENYEMAK PAUTAN", "🛡️", "Sekejap, kami semak pautan ini…")
+        val col = begin(Screen.CHECKING, tr("MENYEMAK PAUTAN", "CHECKING LINK"), "🛡️", tr("Sekejap, kami semak pautan ini…", "One moment, we are checking this link…"))
         ui.text(col, domain, 17f, Palette.onDark, center = true, top = 12)
     }
 
     private fun showWaiting(incident: JSONObject) {
-        val col = begin(Screen.WAITING, "TUNGGU SEKEJAP", "🔒", "Biar $guardianName sahkan pautan ini dulu.")
-        ui.text(col, "Pautan ini menunjukkan tanda-tanda scam. Kami sudah hantar kepada $guardianName untuk disemak. Jangan buka pautan ini sementara menunggu.", 18f, Palette.onDark, center = true, top = 12)
-        linkCard(col, "Pautan mencurigakan", incident.optString("domain", domain))
+        val anak = guardianName
+        val col = begin(Screen.WAITING, tr("TUNGGU SEKEJAP", "PLEASE WAIT"), "🔒", tr("Biar $anak sahkan pautan ini dulu.", "Let $anak check this link first."))
+        ui.text(col, tr(
+            "Pautan ini menunjukkan tanda-tanda scam. Kami sudah hantar kepada $anak untuk disemak. Jangan buka pautan ini sementara menunggu.",
+            "This link shows signs of a scam. We have sent it to $anak to check. Please do not open it while you wait."
+        ), 18f, Palette.onDark, center = true, top = 12)
+        linkCard(col, tr("Pautan mencurigakan", "Suspicious link"), incident.optString("domain", domain))
 
         tipsCard(col)
 
         val timer = ui.card(col, Palette.navyCard, top = 16)
-        ui.text(timer, "Menunggu jawapan anak", 16f, Palette.onDark, center = true)
+        ui.text(timer, tr("Menunggu jawapan anak", "Waiting for anak to answer"), 16f, Palette.onDark, center = true)
         countdownView = ui.text(timer, "", 44f, Palette.white, bold = true, center = true, top = 4)
-        ui.text(timer, "Jika $guardianName tidak menjawab dalam ${durationText(timeoutSeconds)}, kami akan tunjukkan apa yang perlu dibuat.", 16f, Palette.onDark, center = true, top = 4)
+        ui.text(timer, tr(
+            "Jika $anak tidak menjawab dalam ${durationText(timeoutSeconds)}, kami akan tunjukkan apa yang perlu dibuat.",
+            "If $anak does not answer within ${durationText(timeoutSeconds)}, we will show you what to do."
+        ), 16f, Palette.onDark, center = true, top = 4)
         handler.post(tickTask)
 
         guardianPhone?.let { phone ->
-            ui.button(col, "📞  Hubungi $guardianName", Palette.mint, Palette.greenDark, top = 20) { dial(phone) }
+            ui.button(col, tr("📞  Hubungi $anak", "📞  Call $anak"), Palette.mint, Palette.greenDark, top = 20) { dial(phone) }
         }
-        ui.button(col, "Kembali ke telefon (pautan tidak dibuka)", Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { finish() }
-        ui.text(col, "Telefon anda boleh digunakan seperti biasa. Kami akan beritahu anda apabila $guardianName menjawab.", 16f, Palette.white, center = true, top = 14)
+        ui.button(col, tr("Kembali ke telefon (pautan tidak dibuka)", "Back to my phone (link not opened)"), Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { finish() }
+        ui.text(col, tr(
+            "Telefon anda boleh digunakan seperti biasa. Kami akan beritahu anda apabila $anak menjawab.",
+            "You can use your phone as usual. We will tell you when $anak answers."
+        ), 16f, Palette.white, center = true, top = 14)
     }
 
     /** Up to 2 plain-language reasons, so the parent learns why the link looks dangerous. */
     private fun tipsCard(col: LinearLayout) {
         if (tips.isEmpty()) return
         val card = ui.card(col, Palette.navyCard, top = 14)
-        ui.text(card, "Kenapa pautan ini bahaya?", 16f, Palette.mint, bold = true)
+        ui.text(card, tr("Kenapa pautan ini bahaya?", "Why is this link dangerous?"), 16f, Palette.mint, bold = true)
         for (tip in tips) ui.text(card, "•  $tip", 17f, Palette.white, top = 6)
     }
 
     private fun showEscalated(incident: JSONObject) {
-        val col = begin(Screen.ESCALATED, "ANAK ANDA BELUM MENJAWAB", "✋", "Jangan buka pautan ini.")
-        ui.text(col, "$guardianName belum menjawab dalam ${durationText(timeoutSeconds)}. Hubungi $guardianName atau ahli keluarga lain untuk bertanya dahulu.", 18f, Palette.onDark, center = true, top = 12)
-        linkCard(col, "Pautan mencurigakan", incident.str("displayUrl") ?: domain)
+        val anak = guardianName
+        val col = begin(Screen.ESCALATED, tr("ANAK ANDA BELUM MENJAWAB", "YOUR ANAK HAS NOT ANSWERED YET"), "✋", tr("Jangan buka pautan ini.", "Do not open this link."))
+        ui.text(col, tr(
+            "$anak belum menjawab dalam ${durationText(timeoutSeconds)}. Hubungi $anak atau ahli keluarga lain untuk bertanya dahulu.",
+            "$anak has not answered within ${durationText(timeoutSeconds)}. Call $anak or another family member to ask first."
+        ), 18f, Palette.onDark, center = true, top = 12)
+        linkCard(col, tr("Pautan mencurigakan", "Suspicious link"), incident.str("displayUrl") ?: domain)
+        tips = incident.textList(this, "tips")
         tipsCard(col)
 
         guardianPhone?.let { phone ->
-            ui.button(col, "📞  Hubungi $guardianName", Palette.mint, Palette.greenDark, top = 22) { dial(phone) }
+            ui.button(col, tr("📞  Hubungi $anak", "📞  Call $anak"), Palette.mint, Palette.greenDark, top = 22) { dial(phone) }
         }
-        ui.button(col, "⛔  Saya tidak akan buka. Sekat pautan ini.", Palette.redSoft, Palette.redInk, top = 12) {
-            confirm("Sekat pautan ini? Ia tidak akan dibuka.", "Ya, sekat") { blockMyself() }
+        ui.button(col, tr("⛔  Saya tidak akan buka. Sekat pautan ini.", "⛔  I won't open it. Block this link."), Palette.redSoft, Palette.redInk, top = 12) {
+            confirm(tr("Sekat pautan ini? Ia tidak akan dibuka.", "Block this link? It will not be opened."), tr("Ya, sekat", "Yes, block")) { blockMyself() }
         }
 
         val money = ui.card(col, Palette.navyCard, top = 22, stroke = Palette.red)
-        ui.text(money, "Sudah beri maklumat bank, OTP atau pindah wang?", 17f, Palette.white, bold = true)
-        ui.text(money, "Hubungi bank anda dan Pusat Respons Scam Kebangsaan (NSRC) 997 dengan segera.", 16f, Palette.onDark, top = 6)
-        ui.button(money, "📞  Hubungi 997 sekarang", Palette.red, Palette.white, top = 12) { dial("997") }
+        ui.text(money, tr("Sudah beri maklumat bank, OTP atau pindah wang?", "Already gave bank details, an OTP or sent money?"), 17f, Palette.white, bold = true)
+        ui.text(money, tr(
+            "Hubungi bank anda dan Pusat Respons Scam Kebangsaan (NSRC) 997 dengan segera.",
+            "Contact your bank and the National Scam Response Centre (NSRC) on 997 immediately."
+        ), 16f, Palette.onDark, top = 6)
+        ui.button(money, tr("📞  Hubungi 997 sekarang", "📞  Call 997 now"), Palette.red, Palette.white, top = 12) { dial("997") }
 
-        ui.text(col, "Hanya $guardianName boleh membenarkan pautan ini dibuka.", 16f, Palette.white, center = true, top = 16)
+        ui.text(col, tr("Hanya $anak boleh membenarkan pautan ini dibuka.", "Only $anak can allow this link to open."), 16f, Palette.white, center = true, top = 16)
     }
 
     private fun showSafe() {
-        val col = begin(Screen.SAFE, "DISAHKAN SELAMAT", "✅", "$guardianName kata pautan ini selamat.")
-        ui.text(col, "Pautan akan dibuka sekarang.", 18f, Palette.onDark, center = true, top = 12)
-        ui.button(col, "Buka pautan", Palette.mint, Palette.greenDark, top = 24) { openAndFinish() }
+        val col = begin(Screen.SAFE, tr("DISAHKAN SELAMAT", "CONFIRMED SAFE"), "✅", tr("$guardianName kata pautan ini selamat.", "$guardianName says this link is safe."))
+        ui.text(col, tr("Pautan akan dibuka sekarang.", "The link will open now."), 18f, Palette.onDark, center = true, top = 12)
+        ui.button(col, tr("Buka pautan", "Open link"), Palette.mint, Palette.greenDark, top = 24) { openAndFinish() }
         handler.postDelayed({ if (!isDestroyed && !isFinishing) openAndFinish() }, 1500)
     }
 
     private fun showBlocked(byParent: Boolean, remembered: Boolean) {
         screen = Screen.BLOCKED
         handler.removeCallbacks(pollTask)
-        val title = if (byParent) "Pautan telah disekat." else "Ini SCAM. Pautan telah disekat."
-        val col = begin(Screen.BLOCKED, "PAUTAN DISEKAT", "⛔", title)
+        val title = if (byParent) tr("Pautan telah disekat.", "The link is blocked.") else tr("Ini SCAM. Pautan telah disekat.", "This is a SCAM. The link is blocked.")
+        val col = begin(Screen.BLOCKED, tr("PAUTAN DISEKAT", "LINK BLOCKED"), "⛔", title)
         val why = when {
-            remembered -> "Laman ini telah disahkan scam sebelum ini. Family Guard menyekatnya terus."
-            byParent -> "Anda memilih untuk tidak membuka pautan ini. Pilihan yang selamat."
-            else -> "$guardianName telah sahkan pautan ini sebagai scam."
+            remembered -> tr("Laman ini telah disahkan scam sebelum ini. Family Guard menyekatnya terus.", "This site was already confirmed as a scam. Family Guard blocks it straight away.")
+            byParent -> tr("Anda memilih untuk tidak membuka pautan ini. Pilihan yang selamat.", "You chose not to open this link. That was the safe choice.")
+            else -> tr("$guardianName telah sahkan pautan ini sebagai scam.", "$guardianName confirmed this link is a scam.")
         }
         ui.text(col, why, 18f, Palette.onDark, center = true, top = 12)
-        ui.text(col, "Jangan tekan pautan ini lagi. Jika ditekan, ia akan terus disekat.", 18f, Palette.white, bold = true, center = true, top = 14)
-        ui.button(col, "Kembali ke telefon", Palette.mint, Palette.greenDark, top = 24) { finish() }
-        ui.text(col, "Jika anda sudah memberi maklumat bank, OTP atau memindahkan wang, hubungi bank anda dan NSRC 997 segera.", 16f, Palette.peach, center = true, top = 18)
-        ui.button(col, "📞  Hubungi 997", Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { dial("997") }
+        ui.text(col, tr("Jangan tekan pautan ini lagi. Jika ditekan, ia akan terus disekat.", "Do not tap this link again. If you do, it will be blocked straight away."), 18f, Palette.white, bold = true, center = true, top = 14)
+        ui.button(col, tr("Kembali ke telefon", "Back to my phone"), Palette.mint, Palette.greenDark, top = 24) { finish() }
+        ui.text(col, tr(
+            "Jika anda sudah memberi maklumat bank, OTP atau memindahkan wang, hubungi bank anda dan NSRC 997 segera.",
+            "If you have already given bank details or an OTP, or sent money, contact your bank and NSRC 997 immediately."
+        ), 16f, Palette.peach, center = true, top = 18)
+        ui.button(col, tr("📞  Hubungi 997", "📞  Call 997"), Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { dial("997") }
     }
 
     private fun showOffline(message: String?) {
-        val col = begin(Screen.OFFLINE, "TIDAK DAPAT MENYEMAK", "📡", "Pautan ini belum dapat disemak.")
-        ui.text(col, message ?: "Ralat tidak diketahui.", 17f, Palette.onDark, center = true, top = 12)
-        ui.button(col, "Jangan buka (lebih selamat)", Palette.mint, Palette.greenDark, top = 24) { finish() }
-        ui.button(col, "Cuba lagi", Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { showChecking(); scan() }
+        val col = begin(Screen.OFFLINE, tr("TIDAK DAPAT MENYEMAK", "CANNOT CHECK"), "📡", tr("Pautan ini belum dapat disemak.", "This link could not be checked yet."))
+        ui.text(col, message ?: tr("Ralat tidak diketahui.", "Unknown error."), 17f, Palette.onDark, center = true, top = 12)
+        ui.button(col, tr("Jangan buka (lebih selamat)", "Don't open it (safer)"), Palette.mint, Palette.greenDark, top = 24) { finish() }
+        ui.button(col, tr("Cuba lagi", "Try again"), Palette.navy, Palette.white, top = 12, stroke = Palette.onDark) { showChecking(); scan() }
         // Deliberately small and low-contrast: the safe choices above are the easy ones.
-        ui.quietButton(col, "Buka juga tanpa semakan", Palette.onDark, top = 24) {
-            confirm("Pautan ini BELUM disemak dan mungkin scam. Anda pasti mahu buka?", "Buka juga") { openAndFinish() }
+        ui.quietButton(col, tr("Buka juga tanpa semakan", "Open anyway without a check"), Palette.onDark, top = 24) {
+            confirm(
+                tr("Pautan ini BELUM disemak dan mungkin scam. Anda pasti mahu buka?", "This link has NOT been checked and may be a scam. Are you sure you want to open it?"),
+                tr("Buka juga", "Open anyway")
+            ) { openAndFinish() }
         }
     }
 
     private fun showBusy() {
-        val col = begin(Screen.BUSY, "SATU PAUTAN SEDANG DISEMAK", "⏳", "Tunggu jawapan untuk pautan sebelumnya dulu.")
-        ui.text(col, "$guardianName sedang menyemak pautan lain yang anda tekan. Cuba pautan ini lagi selepas itu.", 18f, Palette.onDark, center = true, top = 12)
-        ui.button(col, "Kembali ke telefon", Palette.mint, Palette.greenDark, top = 24) { finish() }
+        val col = begin(Screen.BUSY, tr("SATU PAUTAN SEDANG DISEMAK", "A LINK IS BEING CHECKED"), "⏳", tr("Tunggu jawapan untuk pautan sebelumnya dulu.", "Please wait for the answer about your previous link first."))
+        ui.text(col, tr(
+            "$guardianName sedang menyemak pautan lain yang anda tekan. Cuba pautan ini lagi selepas itu.",
+            "$guardianName is checking another link you tapped. Try this link again after that."
+        ), 18f, Palette.onDark, center = true, top = 12)
+        ui.button(col, tr("Kembali ke telefon", "Back to my phone"), Palette.mint, Palette.greenDark, top = 24) { finish() }
     }
 
     // ---------------------------------------------------------------- helpers
@@ -361,8 +391,6 @@ class LinkCatcherActivity : Activity() {
     }
 
     private fun clock(seconds: Long): String = "%02d:%02d".format(seconds / 60, seconds % 60)
-
-    private fun durationText(seconds: Int): String = if (seconds >= 60) "${(seconds + 30) / 60} minit" else "$seconds saat"
 
     companion object {
         /** The alert currently shown on screen, so the background watcher does not notify about it twice. */

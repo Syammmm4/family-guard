@@ -149,10 +149,12 @@ class Ui(private val ctx: Context) {
         val e = EditText(ctx).apply {
             setText(value)
             this.hint = hint
+            // setSingleLine() must come before inputType: it would otherwise remove the PIN masking.
+            setSingleLine(true)
             inputType = type
+            if (type == TYPE_PIN) transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
             textSize = 18f
             setTextColor(Palette.ink)
-            setSingleLine(true)
             minHeight = dp(56)
             setPadding(dp(14), dp(12), dp(14), dp(12))
             background = GradientDrawable().apply {

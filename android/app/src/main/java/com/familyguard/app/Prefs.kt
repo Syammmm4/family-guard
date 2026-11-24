@@ -27,6 +27,11 @@ class Prefs(context: Context) {
         get() = sp.getString("token", "") ?: ""
         set(value) = sp.edit().putString("token", value).apply()
 
+    /** "ms" (Bahasa Malaysia, default) or "en". Kept when signing out. */
+    var lang: String
+        get() = if (sp.getString("lang", LANG_MS) == LANG_EN) LANG_EN else LANG_MS
+        set(value) = sp.edit().putString("lang", if (value == LANG_EN) LANG_EN else LANG_MS).apply()
+
     val isSetUp: Boolean
         get() = server.isNotBlank() && role.isNotBlank() && pin.isNotBlank()
 
@@ -41,5 +46,7 @@ class Prefs(context: Context) {
     companion object {
         const val ROLE_PARENT = "senior"
         const val ROLE_ANAK = "guardian"
+        const val LANG_MS = "ms"
+        const val LANG_EN = "en"
     }
 }

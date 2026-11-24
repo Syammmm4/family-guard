@@ -23,9 +23,10 @@ class DecisionReceiver : BroadcastReceiver() {
             val message = try {
                 Api.call(app, "POST", "/api/incidents/${Uri.encode(id)}/resolve", JSONObject().put("decision", decision))
                 Notifs.cancelAlert(app)
-                if (decision == "BLOCKED") "Pautan disekat. Ibu/bapa anda telah dimaklumkan." else "Pautan dibenarkan."
+                if (decision == "BLOCKED") app.tr("Pautan disekat. Ibu/bapa anda telah dimaklumkan.", "Link blocked. Your ibu/bapa has been told.")
+                else app.tr("Pautan dibenarkan.", "Link allowed.")
             } catch (e: Exception) {
-                "Gagal: ${e.message}"
+                app.tr("Gagal: ${e.message}", "Failed: ${e.message}")
             }
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(app, message, Toast.LENGTH_LONG).show()

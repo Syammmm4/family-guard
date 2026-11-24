@@ -11,6 +11,13 @@ class ApiException(val status: Int, message: String) : Exception(message)
 /** Returns null for a missing or JSON-null value (optString would return the text "null"). */
 fun JSONObject.str(key: String): String? = if (isNull(key)) null else optString(key).ifBlank { null }
 
+/** Picks the English list (e.g. "reasonsEn") when English is chosen, falling back to the BM list. */
+fun JSONObject.textList(ctx: Context, key: String): List<String> {
+    val en = if (ctx.isEn()) optJSONArray("${key}En") else null
+    val arr = if (en != null && en.length() > 0) en else optJSONArray(key) ?: return emptyList()
+    return List(arr.length()) { arr.optString(it) }.filter { it.isNotBlank() }
+}
+
 /** Talks to the same Family Guard Node server used by the website. Call only from a background thread. */
 object Api {
 
@@ -30,11 +37,11 @@ object Api {
         return s
     }
 
-    private fun raw(server: String, method: String, path: String, token: String?, body: JSONObject?): Pair<Int, JSONObject> {
+    private fun raw(server: String, method: String, path: String, token: String?, body: JSONObject?, en: Boolean): Pair<Int, JSONObject> {
         val conn = try {
             URL(server + path).openConnection() as HttpURLConnection
         } catch (e: Exception) {
-            throw ApiException(0, "Alamat pelayan tidak sah.")
+            throw ApiException(0, if (en) "The server address is not valid." else "Alamat pelayan tidak sah.")
         }
         try {
             conn.requestMethod = method
@@ -42,6 +49,8 @@ object Api {
             conn.connectTimeout = 15000
             conn.readTimeout = 60000
             conn.setRequestProperty("Accept", "application/json")
+            // The server answers error messages in the chosen language.
+            conn.setRequestProperty("X-Lang", if (en) "en" else "ms")
             if (token != null) conn.setRequestProperty("Authorization", "Bearer $token")
             if (body != null) {
                 conn.doOutput = true
@@ -58,36 +67,39 @@ object Api {
             }
             return status to json
         } catch (e: IOException) {
-            throw ApiException(0, "Tidak dapat berhubung dengan pelayan Family Guard. Semak sambungan internet dan alamat pelayan, kemudian cuba lagi.")
+            throw ApiException(0,
+                if (en) "Cannot reach the Family Guard server. Check your internet connection and the server address, then try again."
+                else "Tidak dapat berhubung dengan pelayan Family Guard. Semak sambungan internet dan alamat pelayan, kemudian cuba lagi.")
         } finally {
             conn.disconnect()
         }
     }
 
-    fun login(server: String, role: String, pin: String): String {
-        val (status, json) = raw(server, "POST", "/api/auth", null, JSONObject().put("role", role).put("pin", pin))
-        if (status != 200) throw ApiException(status, json.str("error") ?: "Log masuk gagal ($status).")
+    fun login(server: String, role: String, pin: String, en: Boolean): String {
+        val (status, json) = raw(server, "POST", "/api/auth", null, JSONObject().put("role", role).put("pin", pin), en)
+        if (status != 200) throw ApiException(status, json.str("error") ?: if (en) "Sign-in failed ($status)." else "Log masuk gagal ($status).")
         return json.getString("token")
     }
 
     /** Authenticated request. Signs in again automatically if the server restarted and forgot the session. */
     fun call(context: Context, method: String, path: String, body: JSONObject? = null): JSONObject {
         val prefs = Prefs(context)
-        if (!prefs.isSetUp) throw ApiException(0, "Family Guard belum disediakan pada telefon ini.")
+        val en = prefs.lang == Prefs.LANG_EN
+        if (!prefs.isSetUp) throw ApiException(0, if (en) "Family Guard is not set up on this phone yet." else "Family Guard belum disediakan pada telefon ini.")
         var token = prefs.token
         if (token.isBlank()) {
-            token = login(prefs.server, prefs.role, prefs.pin)
+            token = login(prefs.server, prefs.role, prefs.pin, en)
             prefs.token = token
         }
-        var (status, json) = raw(prefs.server, method, path, token, body)
+        var (status, json) = raw(prefs.server, method, path, token, body, en)
         if (status == 401) {
-            token = login(prefs.server, prefs.role, prefs.pin)
+            token = login(prefs.server, prefs.role, prefs.pin, en)
             prefs.token = token
-            val retry = raw(prefs.server, method, path, token, body)
+            val retry = raw(prefs.server, method, path, token, body, en)
             status = retry.first
             json = retry.second
         }
-        if (status !in 200..299) throw ApiException(status, json.str("error") ?: "Permintaan gagal ($status).")
+        if (status !in 200..299) throw ApiException(status, json.str("error") ?: if (en) "Request failed ($status)." else "Permintaan gagal ($status).")
         return json
     }
 }
