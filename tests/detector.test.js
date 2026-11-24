@@ -39,3 +39,15 @@ test('lookalike bank link gives the parent at most 2 simple tips, brand first', 
 test('genuine site has no tips', () => {
   assert.deepEqual(checkUrl('https://www.maybank2u.com.my').tips, []);
 });
+
+test('every reason and tip also has an English version', () => {
+  const x = checkUrl('http://maybank-secure-verification.top/verify');
+  assert.equal(x.reasonsEn.length, x.reasons.length);
+  assert.equal(x.tipsEn.length, x.tips.length);
+  assert.equal(x.tipsEn[0], 'This is not the official Maybank website.');
+  assert.ok(x.reasonsEn.every(r => typeof r === 'string' && r.length > 0));
+});
+
+test('input errors carry an English message', () => {
+  assert.throws(() => checkUrl('javascript://alert(1)'), err => err.en === 'Only https:// and http:// links can be checked.');
+});

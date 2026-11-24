@@ -55,6 +55,12 @@ test('isolated API workflow, permissions and restored server timer', { timeout: 
     await boot();
     await t.test('state requires authentication', async () => assert.equal((await call('/api/state')).status, 401));
     await t.test('incorrect PIN is rejected', async () => assert.equal((await call('/api/auth', null, { role: 'guardian', pin: '0000' })).status, 401));
+    await t.test('errors follow the X-Lang header (BM by default)', async () => {
+      const bm = await fetch(base + '/api/state');
+      assert.equal((await bm.json()).error, 'Sesi tamat. Sila log masuk semula.');
+      const en = await fetch(base + '/api/state', { headers: { 'X-Lang': 'en' } });
+      assert.equal((await en.json()).error, 'Your session has expired. Please sign in again.');
+    });
     let senior = await login('senior'), guardian = await login('guardian');
     await t.test('guardian cannot create senior scans', async () => assert.equal((await call('/api/scan', guardian, { url: 'https://example.org' })).status, 403));
     await t.test('invalid URL schemes return a validation error', async () => assert.equal((await call('/api/scan', senior, { url: 'javascript://alert(1)' })).status, 400));
