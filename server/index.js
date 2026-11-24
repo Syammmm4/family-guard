@@ -53,6 +53,9 @@ const sessions = new Map(); // prototype only; reset on restart
 const attempts = new Map();
 let timer = null;
 
+// The website and app send "X-Lang: en" when the user has chosen English. BM is the default.
+function say(req, ms, en) { return req.get('x-lang') === 'en' ? en : ms; }
+
 function validRole(role) { return role === 'senior' || role === 'guardian'; }
 function tokenRole(token) {
   const session = sessions.get(token);
@@ -63,17 +66,17 @@ function tokenRole(token) {
 function requireAuth(req, res, next) {
   const token = /^Bearer (.+)$/i.exec(req.headers.authorization || '')?.[1];
   const role = tokenRole(token);
-  if (!role) return res.status(401).json({ error: 'Sesi tamat. Sila log masuk semula.' });
+  if (!role) return res.status(401).json({ error: say(req, 'Sesi tamat. Sila log masuk semula.', 'Your session has expired. Please sign in again.') });
   req.role = role;
   req.token = token;
   next();
 }
 function onlyGuardian(req, res, next) {
-  if (req.role !== 'guardian') return res.status(403).json({ error: 'Akses anak (penjaga) diperlukan.' });
+  if (req.role !== 'guardian') return res.status(403).json({ error: say(req, 'Akses anak (penjaga) diperlukan.', 'Anak (guardian) access is required.') });
   next();
 }
 function onlySenior(req, res, next) {
-  if (req.role !== 'senior') return res.status(403).json({ error: 'Akses ibu/bapa diperlukan.' });
+  if (req.role !== 'senior') return res.status(403).json({ error: say(req, 'Akses ibu/bapa diperlukan.', 'Ibu/bapa access is required.') });
   next();
 }
 
@@ -124,14 +127,14 @@ app.post('/api/auth', (req, res) => {
   const ip = req.ip;
   const entry = attempts.get(ip) || { count: 0, reset: Date.now() + 10 * 60_000 };
   if (Date.now() >= entry.reset) { entry.count = 0; entry.reset = Date.now() + 10 * 60_000; }
-  if (entry.count >= 12) return res.status(429).json({ error: 'Terlalu banyak cubaan. Sila cuba lagi nanti.' });
+  if (entry.count >= 12) return res.status(429).json({ error: say(req, 'Terlalu banyak cubaan. Sila cuba lagi nanti.', 'Too many attempts. Please try again later.') });
   const expected = role === 'guardian' ? guardianPin : role === 'senior' ? seniorPin : null;
   const correct = expected && typeof pin === 'string' && pin.length === expected.length &&
     crypto.timingSafeEqual(Buffer.from(pin), Buffer.from(expected));
   if (!validRole(role) || !correct) {
     entry.count++;
     attempts.set(ip, entry);
-    return res.status(401).json({ error: 'PIN akses salah.' });
+    return res.status(401).json({ error: say(req, 'PIN akses salah.', 'Incorrect access PIN.') });
   }
   attempts.delete(ip);
   const token = crypto.randomBytes(32).toString('hex');
@@ -147,13 +150,13 @@ app.post('/api/logout', requireAuth, (req, res) => {
 app.get('/api/state', requireAuth, (req, res) => res.json(payload(req.role)));
 
 app.post('/api/scan', requireAuth, onlySenior, (req, res) => {
-  if (store.active) return res.status(409).json({ error: 'Amaran masih aktif. Sila tunggu jawapan anak anda.' });
+  if (store.active) return res.status(409).json({ error: say(req, 'Amaran masih aktif. Sila tunggu jawapan anak anda.', 'An alert is still active. Please wait for anak to answer.') });
   let result;
   try {
     // The simulate flag exists solely for teaching and is clearly labelled in the UI.
     result = checkUrl(req.body?.url, { simulate: req.body?.simulate === true });
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: say(req, err.message, err.en || err.message) });
   }
   // A website anak (or 997) already decided on is answered straight away. A blocked site stays blocked.
   const remembered = result.simulated ? null : store.rememberedDecision(result.domain);
@@ -183,11 +186,13 @@ app.post('/api/scan', requireAuth, onlySenior, (req, res) => {
   res.status(201).json({ triggered: true, scan: result, incident });
 });
 
+const noAlert = req => say(req, 'Tiada amaran aktif dengan ID ini.', 'There is no active alert with this ID.');
+
 app.post('/api/incidents/:id/resolve', requireAuth, onlyGuardian, (req, res) => {
   const active = store.active;
-  if (!active || active.id !== req.params.id) return res.status(404).json({ error: 'Tiada amaran aktif dengan ID ini.' });
+  if (!active || active.id !== req.params.id) return res.status(404).json({ error: noAlert(req) });
   const { decision } = req.body || {};
-  if (decision !== 'SAFE' && decision !== 'BLOCKED') return res.status(400).json({ error: 'Pilih SAFE atau BLOCKED.' });
+  if (decision !== 'SAFE' && decision !== 'BLOCKED') return res.status(400).json({ error: say(req, 'Pilih SAFE atau BLOCKED.', 'Choose SAFE or BLOCKED.') });
   const incident = store.update(active.id, { status: 'RESOLVED', decision, decidedBy: 'ANAK', resolvedAt: new Date().toISOString() });
   scheduleEscalation();
   pushState();
@@ -199,11 +204,11 @@ app.post('/api/incidents/:id/resolve', requireAuth, onlyGuardian, (req, res) => 
 // Only anak can ALLOW a link: a trusting parent must never be able to unlock a risky link alone.
 app.post('/api/incidents/:id/report-997', requireAuth, onlySenior, (req, res) => {
   const active = store.active;
-  if (!active || active.id !== req.params.id) return res.status(404).json({ error: 'Tiada amaran aktif dengan ID ini.' });
-  if (active.status !== 'ESCALATED') return res.status(409).json({ error: 'Pilihan ini hanya tersedia selepas masa menunggu anak tamat.' });
+  if (!active || active.id !== req.params.id) return res.status(404).json({ error: noAlert(req) });
+  if (active.status !== 'ESCALATED') return res.status(409).json({ error: say(req, 'Pilihan ini hanya tersedia selepas masa menunggu anak tamat.', 'This option is only available after the time for anak to answer has ended.') });
   const { decision } = req.body || {};
-  if (decision === 'SAFE') return res.status(403).json({ error: 'Hanya anak boleh membenarkan pautan ini.' });
-  if (decision !== 'BLOCKED') return res.status(400).json({ error: 'Pilih BLOCKED.' });
+  if (decision === 'SAFE') return res.status(403).json({ error: say(req, 'Hanya anak boleh membenarkan pautan ini.', 'Only anak can allow this link.') });
+  if (decision !== 'BLOCKED') return res.status(400).json({ error: say(req, 'Pilih BLOCKED.', 'Choose BLOCKED.') });
   const incident = store.update(active.id, { status: 'RESOLVED', decision, decidedBy: 'IBU_BAPA', resolvedAt: new Date().toISOString() });
   scheduleEscalation();
   pushState();
@@ -212,14 +217,14 @@ app.post('/api/incidents/:id/report-997', requireAuth, onlySenior, (req, res) =>
 
 app.post('/api/incidents/:id/escalate', requireAuth, onlyGuardian, (req, res) => {
   const active = store.active;
-  if (!active || active.id !== req.params.id) return res.status(404).json({ error: 'Tiada amaran aktif dengan ID ini.' });
+  if (!active || active.id !== req.params.id) return res.status(404).json({ error: noAlert(req) });
   escalateIncident(active.id);
   res.json({ ok: true });
 });
 
 // Demo helper: bring back deleted chat messages so the presentation can be repeated.
 app.post('/api/demo/reset', requireAuth, (req, res) => {
-  if (store.active) return res.status(409).json({ error: 'Selesaikan amaran yang aktif dahulu.' });
+  if (store.active) return res.status(409).json({ error: say(req, 'Selesaikan amaran yang aktif dahulu.', 'Please settle the active alert first.') });
   store.resetDemo();
   pushState();
   res.json({ ok: true });
@@ -227,9 +232,9 @@ app.post('/api/demo/reset', requireAuth, (req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use(express.static(path.join(root, 'public'), { index: 'index.html', maxAge: 0 }));
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   console.error('Request error:', err.message);
-  res.status(400).json({ error: 'Permintaan ini tidak dapat diproses.' });
+  res.status(400).json({ error: say(req, 'Permintaan ini tidak dapat diproses.', 'This request could not be processed.') });
 });
 
 io.use((socket, next) => {
