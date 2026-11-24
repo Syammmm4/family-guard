@@ -38,6 +38,10 @@ PINs are demo defaults and **must be changed** in `.env` before use on any share
 6. To demonstrate timeout escalation, trigger another demo alert and wait **180 seconds**. The status becomes `ESCALATED`, a backup-family SMS is attempted *only when Twilio is configured*, and senior UI shows manual call actions.
 7. Guardian can still resolve an escalated alert.
 
+### Languages: Bahasa Malaysia and English
+
+BM is the default everywhere. The website has a **BM | EN** switch in the top bar, and the Android app has a language button on the setup and home screens. Warning reasons are stored in both languages, so ibu/bapa and anak can each use their own. The words "anak" and "ibu/bapa" stay as they are in English.
+
 ### Go live on Render (free)
 
 `render.yaml` deploys the server as a public HTTPS site, so testers need no npm and no shared Wi-Fi. Steps (BM): **[docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md)**.
